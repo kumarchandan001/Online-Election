@@ -5,6 +5,7 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
+import { sendVoterRegistrationEmail } from "../lib/email";
 
 // ---------------------------------------------------------------------------
 // POST /api/elections  (Admin only)
@@ -139,8 +140,20 @@ export async function registerVoter(req: Request, res: Response): Promise<void> 
       },
     });
 
+    // --- Send email notification (fire-and-forget) -------------------------
+    const loginUrl = process.env.FRONTEND_URL
+      ? `${process.env.FRONTEND_URL}/login`
+      : "http://localhost:3001/login";
+
+    sendVoterRegistrationEmail({
+      toEmail: user.email,
+      toName: user.name,
+      electionTitle: election.title,
+      loginUrl,
+    });
+
     res.status(201).json({
-      message: "Voter registered for election successfully.",
+      message: "Voter registered for election successfully. Notification email sent.",
       registry,
     });
   } catch (err) {
@@ -452,6 +465,82 @@ export async function getElectionResults(req: Request, res: Response): Promise<v
     });
   } catch (err) {
     console.error("Get election results error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/elections/:id/export  (Admin only)
+// Download election results as a CSV file
+// ---------------------------------------------------------------------------
+export async function exportElectionResults(req: Request, res: Response): Promise<void> {
+  try {
+    const electionId = req.params.id as string;
+
+    // Verify election exists
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      select: { id: true, title: true, status: true },
+    });
+
+    if (!election) {
+      res.status(404).json({ error: "Election not found." });
+      return;
+    }
+
+    // Get aggregate data
+    const [totalRegistered, totalVotesCast] = await Promise.all([
+      prisma.voterRegistry.count({ where: { electionId } }),
+      prisma.ballot.count({ where: { electionId } }),
+    ]);
+
+    const candidates = await prisma.candidate.findMany({
+      where: { electionId },
+      select: {
+        name: true,
+        _count: { select: { ballots: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const turnout =
+      totalRegistered > 0
+        ? Math.round((totalVotesCast / totalRegistered) * 100 * 10) / 10
+        : 0;
+
+    // Build CSV
+    const csvRows: string[] = [];
+
+    // Header metadata rows
+    csvRows.push(`Election Title,"${election.title}"`);
+    csvRows.push(`Status,${election.status}`);
+    csvRows.push(`Total Registered Voters,${totalRegistered}`);
+    csvRows.push(`Total Votes Cast,${totalVotesCast}`);
+    csvRows.push(`Turnout (%),${turnout}`);
+    csvRows.push(""); // blank separator
+
+    // Candidate results header
+    csvRows.push("Candidate Name,Votes,Percentage (%)");
+
+    // Candidate rows
+    for (const c of candidates) {
+      const pct =
+        totalVotesCast > 0
+          ? Math.round((c._count.ballots / totalVotesCast) * 100 * 10) / 10
+          : 0;
+      // Escape candidate name in case it contains commas
+      const safeName = c.name.includes(",") ? `"${c.name}"` : c.name;
+      csvRows.push(`${safeName},${c._count.ballots},${pct}`);
+    }
+
+    const csvContent = csvRows.join("\n");
+    const filename = `election-results-${electionId.slice(0, 8)}.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (err) {
+    console.error("Export results error:", err);
     res.status(500).json({ error: "Internal server error." });
   }
 }

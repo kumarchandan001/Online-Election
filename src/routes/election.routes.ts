@@ -13,6 +13,7 @@ import {
   getAllElections,
   getElectionById,
   getElectionResults,
+  exportElectionResults,
 } from "../controllers/election.controller";
 
 const router = Router();
@@ -35,6 +36,9 @@ router.get("/:id", authenticate, authorizeAdmin, getElectionById);
 
 // GET  /api/elections/:id/results — Aggregated anonymous vote counts
 router.get("/:id/results", authenticate, authorizeAdmin, getElectionResults);
+
+// GET  /api/elections/:id/export — Download results as CSV
+router.get("/:id/export", authenticate, authorizeAdmin, exportElectionResults);
 
 // POST /api/elections — Create a new election
 router.post("/", authenticate, authorizeAdmin, createElection);
