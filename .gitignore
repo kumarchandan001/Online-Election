@@ -6,6 +6,10 @@ node_modules/
 
 # Prisma
 prisma/migrations/
+src/generated/
+
+# Build output
+dist/
 
 # OS
 Thumbs.db

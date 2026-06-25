@@ -1,22 +1,22 @@
 // =============================================================================
 // Prisma Client — Singleton Instance (Prisma 7 / Driver Adapter)
 // =============================================================================
-// Provides a single, reusable PrismaClient instance across the application.
-// Uses the @prisma/adapter-pg driver adapter as required by Prisma 7.
-// Prevents connection pool exhaustion during development with hot-reloading.
+// TypeScript version. Uses @prisma/adapter-pg driver adapter as required by
+// Prisma 7. Prevents connection pool exhaustion during development.
 // =============================================================================
 
-require("dotenv/config");
+import "dotenv/config";
+import { PrismaClient } from "../generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-const { PrismaClient } = require("../generated/prisma/client");
-const { PrismaPg } = require("@prisma/adapter-pg");
-const { Pool } = require("pg");
+// Extend globalThis to persist the client across hot-reloads
+declare global {
+  // eslint-disable-next-line no-var
+  var __prisma: PrismaClient | undefined;
+}
 
-/**
- * Creates a new PrismaClient instance with the pg driver adapter.
- * @returns {import("../generated/prisma/client").PrismaClient}
- */
-function createPrismaClient() {
+function createPrismaClient(): PrismaClient {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const adapter = new PrismaPg(pool);
 
@@ -29,17 +29,15 @@ function createPrismaClient() {
   });
 }
 
-/** @type {import("../generated/prisma/client").PrismaClient} */
-let prisma;
+let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === "production") {
   prisma = createPrismaClient();
 } else {
-  // In development, reuse the client across hot-reloads
   if (!globalThis.__prisma) {
     globalThis.__prisma = createPrismaClient();
   }
   prisma = globalThis.__prisma;
 }
 
-module.exports = { prisma };
+export { prisma };
