@@ -1,0 +1,127 @@
+// =============================================================================
+// Secure Online Election System — Database Schema
+// =============================================================================
+// ORM:       Prisma
+// Database:  PostgreSQL
+// Security:  Ballot table is deliberately NOT linked to User/VoterRegistry
+//            to guarantee strict voter anonymity.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Role assigned to a user on the platform.
+enum Role {
+  ADMIN
+  VOTER
+}
+
+/// Lifecycle status of an election.
+enum ElectionStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+/// A registered platform user (admin or voter).
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(VOTER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  voterRegistries VoterRegistry[]
+
+  @@map("users")
+}
+
+/// An election event with a defined lifecycle.
+model Election {
+  id        String         @id @default(uuid())
+  title     String
+  startTime DateTime       @map("start_time")
+  endTime   DateTime       @map("end_time")
+  status    ElectionStatus @default(UPCOMING)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  candidates      Candidate[]
+  voterRegistries VoterRegistry[]
+  ballots         Ballot[]
+
+  @@map("elections")
+}
+
+/// A candidate standing in a specific election.
+model Candidate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  electionId  String   @map("election_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  ballots  Ballot[]
+
+  @@map("candidates")
+}
+
+/// Tracks which users are eligible for (and have voted in) an election.
+/// NOTE: This table records *that* a user voted — but NOT *who* they voted for.
+model VoterRegistry {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  electionId String   @map("election_id")
+  hasVoted   Boolean  @default(false) @map("has_voted")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  // A user can only be registered once per election
+  @@unique([userId, electionId])
+  @@map("voter_registries")
+}
+
+/// An anonymous ballot cast in an election.
+///
+/// SECURITY: This table intentionally has NO relation to User or VoterRegistry.
+/// The `voteHash` is a unique cryptographic hash that prevents double-counting
+/// while preserving complete voter anonymity. The system can verify *that*
+/// a vote is legitimate without ever knowing *who* cast it.
+model Ballot {
+  id          String   @id @default(uuid())
+  electionId  String   @map("election_id")
+  candidateId String   @map("candidate_id")
+  voteHash    String   @unique @map("vote_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations — scoped to Election and Candidate ONLY (no User link)
+  election  Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("ballots")
+}
