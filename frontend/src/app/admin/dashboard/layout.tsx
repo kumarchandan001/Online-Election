@@ -55,7 +55,7 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Sidebar onLogout={logout} userName={user?.userId.slice(0, 8)} />
+      <Sidebar onLogout={logout} userName={user?.name} />
       <main className="flex-1 overflow-auto">
         <div className="p-8">{children}</div>
       </main>

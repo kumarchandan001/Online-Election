@@ -79,6 +79,7 @@ export interface ElectionResults {
 
 export interface JwtPayload {
   userId: string;
+  name: string;
   role: Role;
   iat: number;
   exp: number;

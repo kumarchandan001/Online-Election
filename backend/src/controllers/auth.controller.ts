@@ -93,7 +93,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     // --- Sign JWT -----------------------------------------------------------
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user.id, name: user.name, role: user.role },
       JWT_SECRET,
       { expiresIn: "24h" }
     );
