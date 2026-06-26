@@ -55,17 +55,22 @@ app.use(
   })
 );
 
-// CORS: strict origin policy — only allow the frontend origin
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3001")
   .split(",")
-  .map((o) => o.trim());
+  .map((o) => o.trim().replace(/\/$/, ""));
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      
+      const cleanOrigin = origin.trim().replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(
+        (allowed) => allowed.toLowerCase() === cleanOrigin.toLowerCase()
+      );
+
+      if (isAllowed) {
         return callback(null, true);
       }
       return callback(new Error("Not allowed by CORS"));
