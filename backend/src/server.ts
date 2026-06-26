@@ -63,12 +63,17 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, server-to-server)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        console.log("[CORS] Request with no origin allowed.");
+        return callback(null, true);
+      }
       
       const cleanOrigin = origin.trim().replace(/\/$/, "");
       const isAllowed = allowedOrigins.some(
         (allowed) => allowed.toLowerCase() === cleanOrigin.toLowerCase()
       );
+
+      console.log(`[CORS] Incoming origin: "${origin}" | Cleaned: "${cleanOrigin}" | Allowed: ${JSON.stringify(allowedOrigins)} | Match: ${isAllowed}`);
 
       if (isAllowed) {
         return callback(null, true);
