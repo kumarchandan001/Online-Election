@@ -35,8 +35,16 @@ export default function VoterRegisterPage() {
     setError("");
 
     // Client-side validation
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password)) {
+      setError("Password must contain at least one letter.");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError("Password must contain at least one number.");
       return;
     }
 

@@ -69,17 +69,17 @@ export default function VoterDashboardPage() {
   return (
     <div>
       {/* Hero Header */}
-      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 p-6 shadow-xl shadow-indigo-500/10 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 p-5 shadow-xl shadow-indigo-500/10 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white sm:text-2xl">
+            <h1 className="text-lg font-bold text-white sm:text-2xl">
               My Elections
             </h1>
-            <p className="mt-1 text-sm text-indigo-200">
+            <p className="mt-1 text-xs text-indigo-200 sm:text-sm">
               View and participate in elections assigned to you
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <StatPill
               icon={
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -318,7 +318,7 @@ function ElectionCard({
           {/* Left: Info */}
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-2.5">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
                 {election.title}
               </h3>
               <StatusBadge status={election.status} />
