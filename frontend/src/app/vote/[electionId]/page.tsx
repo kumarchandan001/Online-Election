@@ -147,9 +147,12 @@ export default function BallotStationPage() {
   }
 
   // =========================================================================
-  // STAGE 3: RECEIPT — Cryptographic Vote Hash
+  // STAGE 3: RECEIPT — Professional Vote Confirmation
   // =========================================================================
   if (stage === "receipt" && voteResult) {
+    const votedAt = new Date(voteResult.ballot.createdAt);
+    const receiptId = voteResult.ballot.voteHash.slice(0, 8).toUpperCase();
+
     return (
       <div className="flex flex-col items-center">
         {/* Success Animation */}
@@ -161,49 +164,70 @@ export default function BallotStationPage() {
           Vote Cast Successfully!
         </h1>
         <p className="mb-8 max-w-md text-center text-sm text-slate-500 sm:text-base">
-          Your ballot has been securely recorded. Below is your anonymous
-          verification receipt.
+          Thank you for participating. Your ballot has been securely recorded
+          and your identity remains anonymous.
         </p>
 
         {/* Receipt Card */}
         <div className="w-full rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50 to-white p-6 shadow-lg dark:border-emerald-800 dark:from-emerald-900/20 dark:to-slate-800 sm:p-8">
-          <div className="mb-4 flex items-center gap-2 text-xs font-semibold tracking-widest text-emerald-700 uppercase dark:text-emerald-400">
+          <div className="mb-5 flex items-center gap-2 text-xs font-semibold tracking-widest text-emerald-700 uppercase dark:text-emerald-400">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            Cryptographic Verification Receipt
+            Vote Confirmation
           </div>
 
-          {/* Vote Hash */}
-          <div className="mb-4 rounded-xl bg-white border border-slate-200 p-4 dark:border-slate-600 dark:bg-slate-700">
-            <p className="mb-1 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              Vote Hash
-            </p>
-            <p className="break-all font-mono text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
-              {voteResult.ballot.voteHash}
+          {/* Summary Grid */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-4 py-3 dark:border-slate-600 dark:bg-slate-700">
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Election</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">{election.title}</span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-4 py-3 dark:border-slate-600 dark:bg-slate-700">
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Voted At</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                {votedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}{" "}
+                at {votedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-4 py-3 dark:border-slate-600 dark:bg-slate-700">
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Receipt No.</span>
+              <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">#{receiptId}</span>
+            </div>
+          </div>
+
+          {/* Status Banner */}
+          <div className="mt-5 flex items-center gap-2 rounded-xl bg-emerald-100 px-4 py-3 dark:bg-emerald-900/30">
+            <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+              Your vote is anonymous and cannot be traced back to you.
             </p>
           </div>
 
-          {/* Copy Button */}
-          <button
-            onClick={copyHash}
-            className="w-full cursor-pointer rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
-          >
-            {copied ? "✓ Copied to clipboard!" : "📋 Copy Vote Hash"}
-          </button>
-
-          {/* Explanation */}
-          <div className="mt-5 rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
-            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              <strong className="text-slate-700 dark:text-slate-300">
-                What is this hash?
-              </strong>{" "}
-              This unique cryptographic identifier is your anonymous
-              verification receipt. It proves your vote was recorded in the
-              system without revealing your identity. No one — not even system
-              administrators — can trace this hash back to you.
-            </p>
-          </div>
+          {/* Advanced: Full Hash (collapsible) */}
+          <details className="mt-4 group">
+            <summary className="cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+              Advanced: View verification hash
+            </summary>
+            <div className="mt-2 rounded-xl bg-slate-50 border border-slate-200 p-4 dark:border-slate-600 dark:bg-slate-700/50">
+              <p className="mb-2 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                Cryptographic Hash
+              </p>
+              <p className="break-all font-mono text-xs text-slate-600 dark:text-slate-300">
+                {voteResult.ballot.voteHash}
+              </p>
+              <button
+                onClick={copyHash}
+                className="mt-3 w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+              >
+                {copied ? "✓ Copied!" : "📋 Copy Hash"}
+              </button>
+            </div>
+          </details>
         </div>
 
         {/* Back to Dashboard */}
