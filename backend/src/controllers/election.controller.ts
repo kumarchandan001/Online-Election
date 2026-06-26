@@ -6,6 +6,12 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { sendVoterRegistrationEmail } from "../lib/email";
+import {
+  sanitizeTitle,
+  sanitizeName,
+  sanitizeString,
+  isValidUUID,
+} from "../middleware/validators";
 
 // ---------------------------------------------------------------------------
 // Helper: compute real-time election status from start/end times
@@ -28,9 +34,15 @@ export async function createElection(req: Request, res: Response): Promise<void>
   try {
     const { title, startTime, endTime } = req.body;
 
-    // --- Input validation ---------------------------------------------------
-    if (!title || !startTime || !endTime) {
-      res.status(400).json({ error: "Fields 'title', 'startTime', and 'endTime' are required." });
+    // --- Input validation & sanitization ------------------------------------
+    const cleanTitle = sanitizeTitle(title);
+    if (!cleanTitle) {
+      res.status(400).json({ error: "Title must be 3–200 characters and cannot contain HTML." });
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      res.status(400).json({ error: "Fields 'startTime' and 'endTime' are required." });
       return;
     }
 
@@ -50,7 +62,7 @@ export async function createElection(req: Request, res: Response): Promise<void>
     // --- Create election ----------------------------------------------------
     const election = await prisma.election.create({
       data: {
-        title,
+        title: cleanTitle,
         startTime: start,
         endTime: end,
         // status defaults to UPCOMING via Prisma schema
@@ -76,10 +88,14 @@ export async function addCandidate(req: Request, res: Response): Promise<void> {
     const electionId = req.params.id as string;
     const { name, description } = req.body;
 
-    if (!name) {
-      res.status(400).json({ error: "Field 'name' is required." });
+    // --- Sanitize inputs ----------------------------------------------------
+    const cleanName = sanitizeName(name);
+    if (!cleanName) {
+      res.status(400).json({ error: "Candidate name must be 2–100 characters and cannot contain HTML." });
       return;
     }
+
+    const cleanDesc = sanitizeString(description, 500);
 
     // --- Verify election exists ---------------------------------------------
     const election = await prisma.election.findUnique({ where: { id: electionId } });
@@ -91,8 +107,8 @@ export async function addCandidate(req: Request, res: Response): Promise<void> {
     // --- Create candidate ---------------------------------------------------
     const candidate = await prisma.candidate.create({
       data: {
-        name,
-        description: description || null,
+        name: cleanName,
+        description: cleanDesc,
         electionId,
       },
     });
@@ -257,6 +273,12 @@ export async function vote(req: Request, res: Response): Promise<void> {
 
     if (!candidateId) {
       res.status(400).json({ error: "Field 'candidateId' is required." });
+      return;
+    }
+
+    // Validate candidateId format
+    if (!isValidUUID(candidateId)) {
+      res.status(400).json({ error: "Invalid candidateId format." });
       return;
     }
 

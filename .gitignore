@@ -1,8 +1,11 @@
 # Dependencies
 node_modules/
 
-# Environment
+# Environment (catch ALL .env files in any subdirectory)
 .env
+.env.*
+**/.env
+**/.env.*
 
 # Backend — Prisma
 backend/prisma/migrations/

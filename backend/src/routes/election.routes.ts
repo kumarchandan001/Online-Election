@@ -1,9 +1,10 @@
 // =============================================================================
-// Election Routes — /api/elections
+// Election Routes — /api/elections (Security-Hardened)
 // =============================================================================
 
 import { Router } from "express";
 import { authenticate, authorizeAdmin } from "../middleware/auth";
+import { validateUUIDParams } from "../middleware/validators";
 import {
   createElection,
   addCandidate,
@@ -24,7 +25,7 @@ const router = Router();
 router.get("/", authenticate, getElections);
 
 // POST /api/elections/:id/vote — Cast an anonymous ballot (transactional)
-router.post("/:id/vote", authenticate, vote);
+router.post("/:id/vote", authenticate, validateUUIDParams, vote);
 
 // ---- Admin only -----------------------------------------------------------
 
@@ -32,21 +33,21 @@ router.post("/:id/vote", authenticate, vote);
 router.get("/all", authenticate, authorizeAdmin, getAllElections);
 
 // GET  /api/elections/:id — Fetch single election detail
-router.get("/:id", authenticate, authorizeAdmin, getElectionById);
+router.get("/:id", authenticate, authorizeAdmin, validateUUIDParams, getElectionById);
 
 // GET  /api/elections/:id/results — Aggregated anonymous vote counts
-router.get("/:id/results", authenticate, authorizeAdmin, getElectionResults);
+router.get("/:id/results", authenticate, authorizeAdmin, validateUUIDParams, getElectionResults);
 
 // GET  /api/elections/:id/export — Download results as CSV
-router.get("/:id/export", authenticate, authorizeAdmin, exportElectionResults);
+router.get("/:id/export", authenticate, authorizeAdmin, validateUUIDParams, exportElectionResults);
 
 // POST /api/elections — Create a new election
 router.post("/", authenticate, authorizeAdmin, createElection);
 
 // POST /api/elections/:id/candidates — Add a candidate to an election
-router.post("/:id/candidates", authenticate, authorizeAdmin, addCandidate);
+router.post("/:id/candidates", authenticate, authorizeAdmin, validateUUIDParams, addCandidate);
 
 // POST /api/elections/:id/register-voter — Register a voter for an election
-router.post("/:id/register-voter", authenticate, authorizeAdmin, registerVoter);
+router.post("/:id/register-voter", authenticate, authorizeAdmin, validateUUIDParams, registerVoter);
 
 export default router;

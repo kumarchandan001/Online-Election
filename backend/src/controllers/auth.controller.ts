@@ -1,11 +1,17 @@
 // =============================================================================
-// Auth Controller — Registration & Login
+// Auth Controller — Registration & Login (Security-Hardened)
 // =============================================================================
 
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
+import {
+  isValidEmail,
+  normalizeEmail,
+  sanitizeName,
+  isStrongPassword,
+} from "../middleware/validators";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const SALT_ROUNDS = 12;
@@ -18,18 +24,32 @@ export async function register(req: Request, res: Response): Promise<void> {
     const { name, email, password } = req.body;
 
     // --- Input validation ---------------------------------------------------
-    if (!name || !email || !password) {
-      res.status(400).json({ error: "Fields 'name', 'email', and 'password' are required." });
+    const cleanName = sanitizeName(name);
+    if (!cleanName) {
+      res.status(400).json({
+        error: "Name must be 2–100 characters and cannot contain HTML.",
+      });
       return;
     }
 
-    if (typeof password !== "string" || password.length < 6) {
-      res.status(400).json({ error: "Password must be at least 6 characters long." });
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: "Please provide a valid email address." });
       return;
     }
+
+    const passwordCheck = isStrongPassword(password);
+    if (!passwordCheck.valid) {
+      res.status(400).json({ error: passwordCheck.reason });
+      return;
+    }
+
+    // Normalize email (trim + lowercase)
+    const cleanEmail = normalizeEmail(email);
 
     // --- Check for existing user -------------------------------------------
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
     if (existingUser) {
       res.status(409).json({ error: "A user with this email already exists." });
       return;
@@ -40,10 +60,11 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: cleanName,
+        email: cleanEmail,
         passwordHash,
-        // role defaults to VOTER via Prisma schema
+        // ⚠️ SECURITY: role is ALWAYS "VOTER" — never accept role from client
+        role: "VOTER",
       },
       select: {
         id: true,
@@ -73,13 +94,28 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     // --- Input validation ---------------------------------------------------
     if (!email || !password) {
-      res.status(400).json({ error: "Fields 'email' and 'password' are required." });
+      res
+        .status(400)
+        .json({ error: "Fields 'email' and 'password' are required." });
       return;
     }
 
+    if (!isValidEmail(email)) {
+      // Generic error to prevent email enumeration
+      res.status(401).json({ error: "Invalid email or password." });
+      return;
+    }
+
+    // Normalize email
+    const cleanEmail = normalizeEmail(email);
+
     // --- Find user ----------------------------------------------------------
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
     if (!user) {
+      // ⚠️ SECURITY: Same error message whether user exists or not
+      //    to prevent email enumeration attacks
       res.status(401).json({ error: "Invalid email or password." });
       return;
     }

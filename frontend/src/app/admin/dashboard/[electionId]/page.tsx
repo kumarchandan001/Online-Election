@@ -74,9 +74,12 @@ export default function ElectionDetailPage() {
       {/* Back + Header */}
       <button
         onClick={() => router.push("/admin/dashboard")}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-500 transition-colors cursor-pointer"
+        className="mb-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-600 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400"
       >
-        ← Back to Dashboard
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Dashboard
       </button>
 
       <div className="mb-8 flex items-start justify-between">

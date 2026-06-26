@@ -15,7 +15,7 @@ export default function VoterDashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, loading, logout } = useAuth();
+  const { isAuthenticated, loading, logout, user } = useAuth();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -35,11 +35,12 @@ export default function VoterDashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <VoterNav onLogout={logout} />
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20">
+      <VoterNav onLogout={logout} userName={user?.name} />
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </main>
     </div>
   );
 }
+

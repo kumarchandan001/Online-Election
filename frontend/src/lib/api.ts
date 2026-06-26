@@ -1,5 +1,5 @@
 // =============================================================================
-// API Client — Centralized fetch wrapper for backend communication
+// API Client — Centralized fetch wrapper (Security-Hardened)
 // =============================================================================
 
 import type { ApiError } from "./types";
@@ -13,6 +13,16 @@ export class ApiRequestError extends Error {
     this.status = status;
     this.name = "ApiRequestError";
   }
+}
+
+/**
+ * Sanitize error messages to prevent XSS from server responses
+ * being rendered in the UI.
+ */
+function sanitizeErrorMessage(msg: unknown): string {
+  if (typeof msg !== "string") return "An unexpected error occurred.";
+  // Strip HTML tags and limit length
+  return msg.replace(/<[^>]*>/g, "").slice(0, 200);
 }
 
 export async function fetchAPI<T>(
@@ -37,10 +47,23 @@ export async function fetchAPI<T>(
   });
 
   if (!res.ok) {
+    // Handle 401 — token expired or invalid → auto-logout
+    if (res.status === 401 && typeof window !== "undefined") {
+      // Clear stale credentials
+      localStorage.removeItem("token");
+
+      // Redirect to login only if not already on login/register page
+      const path = window.location.pathname;
+      if (path !== "/login" && path !== "/register") {
+        window.location.href = "/login";
+      }
+    }
+
     const body: ApiError = await res.json().catch(() => ({
       error: "An unexpected error occurred.",
     }));
-    throw new ApiRequestError(res.status, body.error);
+
+    throw new ApiRequestError(res.status, sanitizeErrorMessage(body.error));
   }
 
   return res.json() as Promise<T>;
