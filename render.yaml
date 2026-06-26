@@ -1,0 +1,37 @@
+# =============================================================================
+# Render Blueprint — Backend API + PostgreSQL Database
+# =============================================================================
+# Deploy with: Render Dashboard → New → Blueprint → Connect Repo
+# Render auto-reads this file and provisions all services.
+# =============================================================================
+
+services:
+  - type: web
+    name: online-election-api
+    runtime: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run render-build
+    startCommand: node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a secure random string
+      - key: DATABASE_URL
+        fromDatabase:
+          name: online-election-db
+          property: connectionString
+      - key: CORS_ORIGIN
+        sync: false  # Set manually after Vercel deploy (e.g., https://your-app.vercel.app)
+      - key: FRONTEND_URL
+        sync: false  # Same as CORS_ORIGIN
+
+databases:
+  - name: online-election-db
+    plan: free
+    region: oregon
+    databaseName: online_election
+    user: election_user
