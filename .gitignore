@@ -7,8 +7,7 @@ node_modules/
 **/.env
 **/.env.*
 
-# Backend — Prisma
-backend/prisma/migrations/
+# Backend — Prisma (generated client only, migrations MUST be committed)
 backend/src/generated/
 
 # Backend — Build output
