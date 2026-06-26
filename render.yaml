@@ -11,7 +11,7 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm install && npm run render-build
+    buildCommand: npm install --include=dev && npm run render-build
     startCommand: node dist/server.js
     envVars:
       - key: NODE_ENV
