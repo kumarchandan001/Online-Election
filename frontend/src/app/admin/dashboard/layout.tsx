@@ -1,10 +1,10 @@
 "use client";
 
 // =============================================================================
-// Admin Layout — Protected wrapper with sidebar + auth guard
+// Admin Layout — Protected wrapper with responsive sidebar + auth guard
 // =============================================================================
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/Sidebar";
@@ -16,6 +16,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isAdmin, loading, logout, user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || !isAdmin)) {
@@ -55,9 +56,33 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Sidebar onLogout={logout} userName={user?.name} />
+      <Sidebar
+        onLogout={logout}
+        userName={user?.name}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+        {/* Mobile header with hamburger */}
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-lg lg:hidden dark:border-slate-700/50 dark:bg-slate-900/80">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="cursor-pointer rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-sm shadow-md">
+              🗳️
+            </div>
+            <span className="text-sm font-bold text-slate-900 dark:text-white">
+              Election Admin
+            </span>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );
