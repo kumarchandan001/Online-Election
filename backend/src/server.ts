@@ -55,9 +55,19 @@ app.use(
   })
 );
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3001")
+// Always allow these origins (production + local dev)
+const HARDCODED_ORIGINS = [
+  "https://online-election-theta.vercel.app",
+  "http://localhost:3001",
+  "http://localhost:3000",
+];
+
+const envOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
-  .map((o) => o.trim().replace(/\/$/, ""));
+  .map((o) => o.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...HARDCODED_ORIGINS, ...envOrigins])];
 
 app.use(
   cors({
