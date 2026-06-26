@@ -4,12 +4,12 @@ node_modules/
 # Environment
 .env
 
-# Prisma
-prisma/migrations/
-src/generated/
+# Backend — Prisma
+backend/prisma/migrations/
+backend/src/generated/
 
-# Build output
-dist/
+# Backend — Build output
+backend/dist/
 
 # OS
 Thumbs.db

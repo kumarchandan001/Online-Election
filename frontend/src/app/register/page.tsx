@@ -1,34 +1,60 @@
 "use client";
 
 // =============================================================================
-// Voter Login Page — /login
+// Voter Registration Page — /register
 // =============================================================================
 
-import { useState, Suspense, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { ApiRequestError } from "@/lib/api";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { fetchAPI, ApiRequestError } from "@/lib/api";
 import Link from "next/link";
 
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const justRegistered = searchParams.get("registered") === "true";
-  const { login } = useAuth();
+interface RegisterResponse {
+  message: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    createdAt: string;
+  };
+}
 
+export default function VoterRegisterPage() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    // Client-side validation
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      await login(email, password);
-      router.push("/dashboard");
+      await fetchAPI<RegisterResponse>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      // Redirect to login page with success message
+      router.push("/login?registered=true");
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setError(err.message);
@@ -57,28 +83,40 @@ function LoginForm() {
             VoteSecure
           </h1>
           <p className="mt-1 text-sm text-slate-500 sm:text-base">
-            Your voice, your choice — cast your ballot securely
+            Create your account to participate in elections
           </p>
         </div>
 
         {/* Card */}
         <div className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-sm sm:max-w-md sm:p-8 dark:border-slate-700/50 dark:bg-slate-800/70 dark:shadow-none">
           <h2 className="mb-6 text-center text-lg font-semibold text-slate-900 dark:text-white">
-            Voter Sign In
+            Create Account
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {justRegistered && (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-600 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                Account created successfully! Sign in below.
-              </div>
-            )}
-
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
                 {error}
               </div>
             )}
+
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
+              />
+            </div>
 
             <div>
               <label
@@ -112,6 +150,26 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                minLength={6}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                minLength={6}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
               />
             </div>
@@ -127,20 +185,20 @@ function LoginForm() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Signing in…
+                  Creating account…
                 </span>
               ) : (
-                "Sign In to Vote"
+                "Create Account"
               )}
             </button>
           </form>
         </div>
 
-        {/* Sign up link */}
+        {/* Login link */}
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-indigo-500 hover:underline">
-            Sign up →
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-indigo-500 hover:underline">
+            Sign in →
           </Link>
         </p>
 
@@ -153,13 +211,5 @@ function LoginForm() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function VoterLoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   );
 }

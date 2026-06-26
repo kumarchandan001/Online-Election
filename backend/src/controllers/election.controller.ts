@@ -8,6 +8,19 @@ import { prisma } from "../lib/prisma";
 import { sendVoterRegistrationEmail } from "../lib/email";
 
 // ---------------------------------------------------------------------------
+// Helper: compute real-time election status from start/end times
+// ---------------------------------------------------------------------------
+function computeElectionStatus(
+  startTime: Date,
+  endTime: Date
+): "UPCOMING" | "ACTIVE" | "COMPLETED" {
+  const now = new Date();
+  if (now < startTime) return "UPCOMING";
+  if (now > endTime) return "COMPLETED";
+  return "ACTIVE";
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/elections  (Admin only)
 // Create a new election
 // ---------------------------------------------------------------------------
@@ -164,7 +177,7 @@ export async function registerVoter(req: Request, res: Response): Promise<void> 
 
 // ---------------------------------------------------------------------------
 // GET /api/elections  (Authenticated)
-// Fetch all active or upcoming elections the user is registered to vote in
+// Fetch all active or upcoming elections for any logged-in voter
 // ---------------------------------------------------------------------------
 export async function getElections(req: Request, res: Response): Promise<void> {
   try {
@@ -172,9 +185,6 @@ export async function getElections(req: Request, res: Response): Promise<void> {
 
     const elections = await prisma.election.findMany({
       where: {
-        voterRegistries: {
-          some: { userId },
-        },
         status: {
           in: ["UPCOMING", "ACTIVE"],
         },
@@ -197,16 +207,28 @@ export async function getElections(req: Request, res: Response): Promise<void> {
       orderBy: { startTime: "asc" },
     });
 
-    // Flatten the voterRegistries array into a single hasVoted boolean
-    const result = elections.map((election) => ({
-      id: election.id,
-      title: election.title,
-      startTime: election.startTime,
-      endTime: election.endTime,
-      status: election.status,
-      candidates: election.candidates,
-      hasVoted: election.voterRegistries[0]?.hasVoted ?? false,
-    }));
+    // Compute real-time status and flatten voterRegistries
+    const result = elections.map((election) => {
+      const liveStatus = computeElectionStatus(election.startTime, election.endTime);
+
+      // Auto-sync stale DB status (fire-and-forget)
+      if (liveStatus !== election.status) {
+        prisma.election.update({
+          where: { id: election.id },
+          data: { status: liveStatus },
+        }).catch(() => {});
+      }
+
+      return {
+        id: election.id,
+        title: election.title,
+        startTime: election.startTime,
+        endTime: election.endTime,
+        status: liveStatus,
+        candidates: election.candidates,
+        hasVoted: election.voterRegistries[0]?.hasVoted ?? false,
+      };
+    });
 
     res.status(200).json({ elections: result });
   } catch (err) {
@@ -259,17 +281,20 @@ export async function vote(req: Request, res: Response): Promise<void> {
         );
       }
 
-      // Step 2: Verify voter is registered and has NOT voted yet
-      const registry = await tx.voterRegistry.findUnique({
+      // Step 2: Find or auto-create voter registry entry
+      let registry = await tx.voterRegistry.findUnique({
         where: { userId_electionId: { userId, electionId } },
       });
 
-      if (!registry) {
-        throw new TransactionError(403, "You are not registered to vote in this election.");
+      if (registry && registry.hasVoted) {
+        throw new TransactionError(409, "You have already voted in this election.");
       }
 
-      if (registry.hasVoted) {
-        throw new TransactionError(409, "You have already voted in this election.");
+      // Auto-register the voter if they haven't been registered yet
+      if (!registry) {
+        registry = await tx.voterRegistry.create({
+          data: { userId, electionId, hasVoted: false },
+        });
       }
 
       // Step 3: Verify candidate belongs to this election
@@ -346,7 +371,21 @@ export async function getAllElections(req: Request, res: Response): Promise<void
       orderBy: { createdAt: "desc" },
     });
 
-    res.status(200).json({ elections });
+    // Compute real-time status for admin view too
+    const result = elections.map((election) => {
+      const liveStatus = computeElectionStatus(election.startTime, election.endTime);
+
+      if (liveStatus !== election.status) {
+        prisma.election.update({
+          where: { id: election.id },
+          data: { status: liveStatus },
+        }).catch(() => {});
+      }
+
+      return { ...election, status: liveStatus };
+    });
+
+    res.status(200).json({ elections: result });
   } catch (err) {
     console.error("Get all elections error:", err);
     res.status(500).json({ error: "Internal server error." });

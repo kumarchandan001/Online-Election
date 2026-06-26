@@ -18,6 +18,7 @@ services:
     runtime: node
     region: oregon
     plan: free
+    rootDir: backend
     buildCommand: >
       npm install &&
       npx prisma generate &&
