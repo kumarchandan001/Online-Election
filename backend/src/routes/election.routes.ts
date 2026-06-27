@@ -15,6 +15,7 @@ import {
   getElectionById,
   getElectionResults,
   exportElectionResults,
+  deleteElection,
 } from "../controllers/election.controller";
 
 const router = Router();
@@ -49,5 +50,8 @@ router.post("/:id/candidates", authenticate, authorizeAdmin, validateUUIDParams,
 
 // POST /api/elections/:id/register-voter — Register a voter for an election
 router.post("/:id/register-voter", authenticate, authorizeAdmin, validateUUIDParams, registerVoter);
+
+// DELETE /api/elections/:id — Delete a completed election
+router.delete("/:id", authenticate, authorizeAdmin, validateUUIDParams, deleteElection);
 
 export default router;

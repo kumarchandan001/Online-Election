@@ -14,8 +14,10 @@ export default function DashboardPage() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadElections() {
+    setLoading(true);
     fetchAPI<{ elections: Election[] }>("/elections/all")
       .then((data) => setElections(data.elections))
       .catch((err) => {
@@ -23,7 +25,32 @@ export default function DashboardPage() {
         else setError("Failed to load elections.");
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadElections();
   }, []);
+
+  async function handleDelete(electionId: string, title: string) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${title}"?\n\nThis will permanently remove the election and all its data (candidates, voters, votes). This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(electionId);
+    try {
+      await fetchAPI(`/elections/${electionId}`, { method: "DELETE" });
+      setElections((prev) => prev.filter((e) => e.id !== electionId));
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        alert(err.message);
+      } else {
+        alert("Failed to delete election.");
+      }
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   const upcoming = elections.filter((e) => e.status === "UPCOMING");
   const active = elections.filter((e) => e.status === "ACTIVE");
@@ -86,7 +113,34 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
               {elections.map((election) => (
-                <ElectionCard key={election.id} election={election} />
+                <div key={election.id} className="relative">
+                  <ElectionCard election={election} />
+                  {/* Delete button for completed elections */}
+                  {election.status === "COMPLETED" && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(election.id, election.title);
+                      }}
+                      disabled={deleting === election.id}
+                      className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-semibold text-white shadow-md backdrop-blur-sm transition-all hover:bg-red-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete this completed election"
+                    >
+                      {deleting === election.id ? (
+                        <>
+                          <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Deleting…
+                        </>
+                      ) : (
+                        <>🗑️ Delete</>
+                      )}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -128,3 +182,4 @@ function StatCard({
     </div>
   );
 }
+

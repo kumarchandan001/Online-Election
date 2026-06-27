@@ -606,6 +606,49 @@ export async function exportElectionResults(req: Request, res: Response): Promis
   }
 }
 
+// ---------------------------------------------------------------------------
+// DELETE /api/elections/:id  (Admin only)
+// Delete a completed election and all its related data.
+// ---------------------------------------------------------------------------
+export async function deleteElection(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const id = req.params.id as string;
+
+    if (!isValidUUID(id)) {
+      res.status(400).json({ error: "Invalid election ID." });
+      return;
+    }
+
+    // Find the election
+    const election = await prisma.election.findUnique({ where: { id } });
+
+    if (!election) {
+      res.status(404).json({ error: "Election not found." });
+      return;
+    }
+
+    // Only allow deleting COMPLETED elections
+    const status = computeElectionStatus(election.startTime, election.endTime);
+    if (status !== "COMPLETED") {
+      res
+        .status(400)
+        .json({ error: "Only completed elections can be deleted." });
+      return;
+    }
+
+    // Delete election (cascades to candidates, ballots, voter registries via schema)
+    await prisma.election.delete({ where: { id } });
+
+    res.status(200).json({ message: "Election deleted successfully." });
+  } catch (err) {
+    console.error("Delete election error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+}
+
 // =============================================================================
 // Helper: TransactionError — carries an HTTP status code out of $transaction
 // =============================================================================
