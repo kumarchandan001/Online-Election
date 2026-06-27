@@ -149,3 +149,58 @@ export async function login(req: Request, res: Response): Promise<void> {
     res.status(500).json({ error: "Internal server error." });
   }
 }
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/promote-admin
+// One-time setup endpoint to promote a user to ADMIN role.
+// Requires the server's JWT_SECRET as authorization.
+// ---------------------------------------------------------------------------
+export async function promoteAdmin(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const { email, secret } = req.body;
+
+    // Must provide the JWT_SECRET to authorize this action
+    if (!secret || secret !== JWT_SECRET) {
+      res.status(403).json({ error: "Invalid secret key." });
+      return;
+    }
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required." });
+      return;
+    }
+
+    const cleanEmail = normalizeEmail(email);
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    if (user.role === "ADMIN") {
+      res.status(200).json({ message: "User is already an admin.", user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      return;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { email: cleanEmail },
+      data: { role: "ADMIN" },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    res.status(200).json({
+      message: "User promoted to ADMIN successfully.",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Promote admin error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+}
