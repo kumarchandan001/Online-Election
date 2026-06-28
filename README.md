@@ -90,7 +90,7 @@ npx prisma studio           # Opens DB GUI at http://localhost:5555
 
 ## 📁 Project Structure
 
-```
+``
 backend/
 ├── prisma/
 │   └── schema.prisma        # Database schema
@@ -115,8 +115,4 @@ frontend/
 │   └── lib/                   # API client, types
 ├── next.config.ts             # API proxy config
 └── vercel.json                # Vercel deployment
-```
-
-## 📄 License
-
-MIT
+``
